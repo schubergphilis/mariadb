@@ -17,6 +17,8 @@
 # limitations under the License.
 #
 
+include_recipe 'database::mariadb'
+
 case node['mariadb']['install']['type']
 when 'package'
   # include MariaDB repositories
@@ -109,24 +111,61 @@ if platform?('debian', 'ubuntu')
     mode '0600'
   end
 
-  execute 'correct-debian-grants' do
-    command 'mysql -r -B -N -e "GRANT SELECT, INSERT, UPDATE, DELETE, ' + \
-      'CREATE, DROP, RELOAD, SHUTDOWN, PROCESS, FILE, REFERENCES, INDEX, ' + \
-      'ALTER, SHOW DATABASES, SUPER, CREATE TEMPORARY TABLES, ' + \
-      'LOCK TABLES, EXECUTE, REPLICATION SLAVE, REPLICATION CLIENT, ' + \
-      'CREATE VIEW, SHOW VIEW, CREATE ROUTINE, ALTER ROUTINE, ' + \
-      "CREATE USER, EVENT, TRIGGER ON *.* TO '" + \
-      node['mariadb']['debian']['user'] + \
-      "'@'" + node['mariadb']['debian']['host'] + "' IDENTIFIED BY '" + \
-      node['mariadb']['debian']['password'] + "' WITH GRANT OPTION\""
-    action :run
-    only_if do
-      cmd = shell_out("/usr/bin/mysql --user=\"" + \
-        node['mariadb']['debian']['user'] + \
-        "\" --password=\"" + node['mariadb']['debian']['password'] + \
-        "\" -r -B -N -e \"SELECT 1\"")
-      cmd.error!
-    end
-    ignore_failure true
+  mysql_database_user node['mariadb']['debian']['user'] do
+    connection(
+      host: '127.0.0.1',
+      username: 'root',
+      password: node['mariadb']['server_root_password']
+    )
+    privileges [
+      :select,
+      :update,
+      :insert,
+      :update,
+      :delete,
+      :create,
+      :drop,
+      :reload,
+      :shutdown,
+      :process,
+      :file,
+      :references,
+      :index,
+      :alter,
+      'show databases',
+      :super,
+      'create temporary tables',
+      'lock tables',
+      :execute,
+      'replication slave',
+      'replication client',
+      'create view',
+      'show view',
+      'create user',
+      :event,
+      :trigger
+    ]
+    password node['mariadb']['debian']['password']
+    action [:create, :grant]
   end
+#  execute 'correct-debian-grants' do
+#    command 'mysql -r -B -N -e "GRANT SELECT, INSERT, UPDATE, DELETE, ' + \
+#      'CREATE, DROP, RELOAD, SHUTDOWN, PROCESS, FILE, REFERENCES, INDEX, ' + \
+#      'ALTER, SHOW DATABASES, SUPER, CREATE TEMPORARY TABLES, ' + \
+#      'LOCK TABLES, EXECUTE, REPLICATION SLAVE, REPLICATION CLIENT, ' + \
+#      'CREATE VIEW, SHOW VIEW, CREATE ROUTINE, ALTER ROUTINE, ' + \
+#      "CREATE USER, EVENT, TRIGGER ON *.* TO '" + \
+#      node['mariadb']['debian']['user'] + \
+#      "'@'" + node['mariadb']['debian']['host'] + "' IDENTIFIED BY '" + \
+#      node['mariadb']['debian']['password'] + "' WITH GRANT OPTION\""
+#    action :run
+#    only_if do
+#      cmd = shell_out("/usr/bin/mysql --user=\"" + \
+#        node['mariadb']['debian']['user'] + \
+#        "\" --password=\"" + node['mariadb']['debian']['password'] + \
+#        "\" -r -B -N -e \"SELECT 1\"")
+#      cmd.error!
+#    end
+#    ignore_failure true
+#  end
 end

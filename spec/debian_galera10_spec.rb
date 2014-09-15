@@ -71,29 +71,10 @@ describe 'debian::mariadb::galera10-rsync' do
       )
   end
 
-  it 'Does not correct Grants for debian-sys-maint user if it s ok' do
-    expect(Mixlib::ShellOut).to receive(:new)
-      .with('/usr/bin/mysql --user="debian-sys-maint" ' + \
-            '--password="please-change-me" -r -B -N -e "SELECT 1"')
-    expect(chef_run).to_not run_execute('correct-debian-grants')
+  it 'Create and grant debian-sys-maint user' do
+    expect(chef_run).to create_mysql_database_user('debian-sys-maint')
+    expect(chef_run).to grant_mysql_database_user('debian-sys-maint')
   end
-
-  context 'debian-sys-maint is not good' do
-    let(:shellout) do
-      double(run_command: nil, error!: true,
-             stdout: 'ERROR 1045 (28000): Access denied for user ' + \
-               '\'debian-sys-maint\'@\'localhost\' (using password: YES)',
-             stderr: double(empty?: false), exitstatus: 1,
-             :live_stream= => nil)
-    end
-    before do
-      allow(Mixlib::ShellOut).to receive(:new).and_return(shellout)
-    end
-    it 'it correct debian-sys-maint grants' do
-      expect(chef_run).to run_execute('correct-debian-grants')
-    end
-  end
-
 end
 
 describe 'debian::mariadb::galera10-xtrabackup' do
